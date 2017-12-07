@@ -1,0 +1,106 @@
+
+SUBLEQ
+
+Last update Oct 2009 
+Assembly language sqasm.cpp
+Emulator (interpreter) sqrun.cpp
+Compiler into Subleq
+Low Cost Subleq Supercomputer
+Subleq is a simple one instruction language (form of OISC). Its specifications were taken from Clive Gifford page (http://eigenratios.blogspot.com/). Each subleq instruction has 3 operands: 
+A B C
+which are memory addresses. Execution of one instruction A B C subtracts the value of memory in A from the content of memory in B. If value after subtraction in B less or equal to zero, then execution jumps to the address C; otherwise to the next instruction. 
+For example, in 
+3 4 6
+7 7 7
+3 4 0 
+first instruction subtracts 7 (address 3) from 7 (address 4). The result in address 4 is 0, so goto 6. On address 6 is the instruction 3 4 0 which again subtracts 7 from now 0 and jumps back to 0. Here is a sequence of execution (A and B are shown after subtraction) 
+0:	3 4 6 A=7 B=0
+6:	3 4 0 A=7 B=-7
+0:	3 4 6 A=7 B=-14
+6:	3 4 0 A=7 B=-21
+0:	3 4 6 A=7 B=-28
+... 
+
+It is not convenient to use numbers as addresses so we can replace them with labels or names: 
+X Y 6
+X:7 Y:7 7
+X Y 0
+Then a small converter sqasm.cpp (download from the top of the page) would build the program above:
+> sqasm < file.sq > file.out 
+> sqrun -trace file.out 
+If we want a program to produce a result - kind of output, then we have to make a convention that there are well defined memory addresses which take some special functions when used. Let us have a look at this "Hi" program 
+ 
+First line "Hi (-1)" subtracts ASCII value 'H' from Input/Output register. This is a conventional address. It can be defined as any value: negative or positive. The only difference is that when the program is being executed the execution model should make special action when dealing with this address. In our case it is to input or output. [Note that it is also possible to leave this address undefined until later stage, for example, "Hi OUT". Then it would be a task for the loader or the emulator to treat this undefined address.] 
+The action is to print ASCII character of value 'H' (72). Operand C is missed, but our assembler is smart enough to assume that C is the next instruction. The next instruction is the same but writes 'i' (105) to OUT. The following instruction is an unconditional jump to a negative address, which means HALT. This subtracts the memory cell 0 from the same memory cell. The address of that memory in not important since the program stops here. The next line ". Hi: 'H' 'i'" is data which is used by a program. Dot signifies that the command is not an instruction - it does not have necessary 3 operands. We need it to distinguish from the 2 operand command when 3rd implicitly implied. For example: the command "A:A B:B" on address 100 will be translated into "100 101 103" (103=100+3) and ".A:A B:B" into "100 101". 
+
+Another more complex example of "Hello world!" program 
+ 
+The logic of this program is to output one symbol at a time pointed by a pointer p and incrementing it every iteration. The line
+. H: "Hello world!\n" E:E
+is the same as
+. H: 'H' 'e' 'l' 'l' 'o' ' ' 'w' 'o' 'r' 'l' 'd' '!' '\n' E:E
+The pointer is initialized with the label 'H' and checked for achieving the label 'E'. One complex part of the program is printing a value stored at the address stored in p (dereferencing). 
+
+You have noticed that the symbol '#' makes comment. Another simplification to the syntax is semicolon ';' separating one instruction from another. Another simplification is implicit B operand, which means B=A. And yet another simplification is '?' symbol specifying the next address (this+1). For example, "A;" is the same as "A A" which is the same as "A A ?", because the default C operand is the next instruction and the address of the next instruction is the same as the address of C operand +1. The code "?; ? ? ?; ?" is translated into 
+1 1 3
+4 5 6
+7 7 9
+
+
+Clive Gifford wrote self-interpreter in Subleq http://eigenratios.blogspot.com/2006/09/mark-ii-oisc-self-interpreter.html 
+
+Below is a Clive's self-interpreter in this syntax. One modification was made to take into account a special OUT register, i.e. self-interpreter shifting memory address space of interpreted program should not shift address of the special register. 
+ 
+Here is intermediate self-interpreter code with Clive's comments.
+How to run self-interpreter
+
+> sqasm < siout.sq > si 
+> sqasm < hw3.sq > hw3 
+> sqrun hw3 
+Hello world!
+> sqrun si hw3 
+Hello world!
+> sqrun si si hw3 
+Hello world!
+> sqrun si si si hw3 
+Hello world!           Very slowly
+Comments
+
+Jump to negative address stops the program
+Jump address is taken before instruction execution
+Input is done as modification in memory - loading behind
+Syntactic sugar
+
+semicolon or EOL ends instruction
+? stands for the next address, i.e. A:? means A+1
+. stands for free instruction (not necessary 3)
+output port is a defined memory address (possibly negative)
+short instructions: "A" is "A A ?" and "A B" is "A B ?"
+Other resources
+
+99-bottles-of-beer in Subleq
+Subleq on esolangs.org
+Higher Subleq - C to Subleq compiler
+David Robert's Subleq project
+Hello world the simplest program
+Addleq
+
+Addleq is a Turing-complete OISC language, and similar to Subleq, with the exception that it uses addition operation instead of subtraction. However it is much harder to program in Addleq than in Subleq. Because of similarity to Subleq, the exactly same assembly can be used.
+echo.adq Echo program outputs its input
+hi.adq Simplistic program prinitng "Hi"
+hw.adq "Hello, World!" program
+hw2.adq Simpler "Hello, World!" program
+To run programs use the option (-a) in sqrun emulator.
+Other resources
+
+Addleq on esolangs.org
+P1eq
+
+P1eq is another Subleq derivative. It uses copy plus one operation instead of subtraction and jumps if the instruction does not modify the second operand, i.e. A+1==B. Because of similarity to Subleq, the exactly same assembly can be used.
+hw.p1q "Hello, World!" program
+sum.p1q Arithmetic sum demo
+To run programs use the option (-p) in sqrun emulator.
+Other resources
+
+P1eq on esolangs.org
+Home  
